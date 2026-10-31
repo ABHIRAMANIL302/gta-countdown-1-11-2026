@@ -1475,7 +1475,7 @@
                             <span class="preload-title">PRE-LOAD / AUTO-DOWNLOAD</span>
                             <span class="preload-badge-active" id="preloadBadge">ENABLED</span>
                         </div>
-                        <span class="preload-desc" id="preloadSchedule">Expected: Nov 17, 2026 (48h Prior) • 152.8 GB</span>
+                        <span class="preload-desc" id="preloadSchedule">Starts: Nov 12, 2026 • 152.8 GB</span>
                     </div>
                 </div>
 
@@ -1618,8 +1618,13 @@
 
         <!-- Pre-load Hours Lead Time -->
         <div class="form-group">
-            <label class="form-label" for="cfgPreloadHours">Pre-load Start (Hours Before Launch)</label>
-            <input type="number" id="cfgPreloadHours" class="form-input" min="1" max="720" value="48">
+            <label class="form-label" for="cfgPreloadDate">Pre-load Start Date & Time</label>
+            <input type="datetime-local" id="cfgPreloadDate" class="form-input" value="2026-11-12T00:00">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="cfgPreloadHours">Pre-load Lead Time (Hours Before Launch)</label>
+            <input type="number" id="cfgPreloadHours" class="form-input" min="1" max="720" value="168">
         </div>
 
         <!-- Channel Watermark / Name -->
@@ -1685,7 +1690,8 @@
     // ==========================================
     const DEFAULT_CONFIG = {
         targetDate: "2026-11-19T00:00",
-        preloadHours: 48,
+        preloadDate: "2026-11-12T00:00",
+        preloadHours: 168,
         watermark: "",
         avatarLogo: "logo.png",
         wallpaper: "background_jason_lucia.jpg",
@@ -1707,6 +1713,10 @@
             console.warn("Could not read from localStorage", e);
         }
         if (config.watermark === "CHRI TV") config.watermark = "";
+        if (config.preloadHours === 48 || !config.preloadDate) {
+            config.preloadHours = 168;
+            config.preloadDate = "2026-11-12T00:00";
+        }
     }
 
     function saveConfig() {
@@ -1837,8 +1847,9 @@
     function updateTimers() {
         const now = new Date().getTime();
         const launchTime = new Date(config.targetDate).getTime();
-        const preloadLeadMs = config.preloadHours * 60 * 60 * 1000;
-        const preloadTime = launchTime - preloadLeadMs;
+        const preloadTime = config.preloadDate
+            ? new Date(config.preloadDate).getTime()
+            : (launchTime - (config.preloadHours * 60 * 60 * 1000));
 
         // 1. Launch Countdown
         const diffLaunch = launchTime - now;
@@ -1862,11 +1873,11 @@
             secsVal.textContent = formatNumber(s);
         }
 
-        // 2. Pre-load Countdown
+        // 2. Pre-load Countdown (Starts Nov 12, 2026)
         const diffPreload = preloadTime - now;
         const preloadDateObj = new Date(preloadTime);
         const options = { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' };
-        preloadSchedule.textContent = `Starts: ${preloadDateObj.toLocaleDateString(undefined, options)} (${config.preloadHours}h Prior) • 152.8 GB`;
+        preloadSchedule.textContent = `Starts: ${preloadDateObj.toLocaleDateString(undefined, options)} • 152.8 GB`;
 
         if (diffPreload <= 0 && diffLaunch > 0) {
             preloadTimerDigits.textContent = "PRE-LOAD READY";
@@ -2059,6 +2070,7 @@
     const btnSaveDrawer = document.getElementById("btnSaveDrawer");
 
     const cfgTargetDate = document.getElementById("cfgTargetDate");
+    const cfgPreloadDate = document.getElementById("cfgPreloadDate");
     const cfgPreloadHours = document.getElementById("cfgPreloadHours");
     const cfgWatermark = document.getElementById("cfgWatermark");
     const cfgAvatarLogo = document.getElementById("cfgAvatarLogo");
@@ -2070,7 +2082,8 @@
 
     function populateDrawer() {
         cfgTargetDate.value = config.targetDate;
-        cfgPreloadHours.value = config.preloadHours;
+        if (cfgPreloadDate) cfgPreloadDate.value = config.preloadDate || "2026-11-12T00:00";
+        cfgPreloadHours.value = config.preloadHours || 168;
         cfgWatermark.value = config.watermark;
         cfgAvatarLogo.value = config.avatarLogo || "logo.png";
         cfgWallpaper.value = config.wallpaper;
@@ -2098,6 +2111,7 @@
 
     btnSaveDrawer.addEventListener("click", () => {
         config.targetDate = cfgTargetDate.value || DEFAULT_CONFIG.targetDate;
+        if (cfgPreloadDate) config.preloadDate = cfgPreloadDate.value || DEFAULT_CONFIG.preloadDate;
         config.preloadHours = parseInt(cfgPreloadHours.value, 10) || DEFAULT_CONFIG.preloadHours;
         config.watermark = cfgWatermark.value;
         config.avatarLogo = cfgAvatarLogo.value || "logo.png";
